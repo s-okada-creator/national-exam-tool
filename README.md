@@ -64,25 +64,33 @@ python3 app.py
 
 ## Web上で公開する
 
-このアプリケーションをWeb上で公開する方法は `DEPLOYMENT.md` を参照してください。
+このアプリケーションをWeb上で公開する方法は `DEPLOYMENT_VERCEL.md` を参照してください。
 
-### クイックデプロイ（Render）
+### クイックデプロイ（Vercel）⭐ 推奨
 
-1. https://dashboard.render.com にアクセス
+**方法1: Vercel CLIでデプロイ**
+```bash
+# ログイン（初回のみ）
+vercel login
+
+# デプロイ
+vercel --yes --prod
+```
+
+**方法2: Webダッシュボードからデプロイ**
+1. https://vercel.com にアクセス
 2. GitHubアカウントでログイン
-3. 「New +」→「Web Service」を選択
+3. 「Add New...」→「Project」を選択
 4. リポジトリ `s-okada-creator/national-exam-tool` を選択
-5. 設定:
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `python app.py`
-6. 「Create Web Service」をクリック
+5. 「Deploy」をクリック
 
-詳細は `DEPLOYMENT.md` を参照してください。
+詳細は `DEPLOYMENT_VERCEL.md` を参照してください。
 
-推奨サービス:
-- **Render**（無料プランあり、簡単）⭐ 推奨
-- **Railway**（無料プランあり）
-- **PythonAnywhere**（無料プランあり）
+### その他のデプロイ方法
+
+- **Render**: `DEPLOYMENT.md` を参照
+- **Railway**: 無料プランあり
+- **PythonAnywhere**: 無料プランあり
 
 ## データ構造
 
