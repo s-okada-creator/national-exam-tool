@@ -10,8 +10,8 @@ from datetime import datetime
 from utils.question_manager import QuestionManager
 from utils.report_generator import ReportGenerator
 
-app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # 本番環境では変更してください
+app = Flask(__name__, static_folder='static', static_url_path='/static')
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  # 本番環境では環境変数から取得
 
 # データディレクトリ
 DATA_DIR = Path('data')
