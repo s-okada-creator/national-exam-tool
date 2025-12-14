@@ -1,93 +1,77 @@
-# デプロイ手順
+# デプロイ手順（Render）
 
-このアプリケーションをWeb上で公開する方法を説明します。
+このアプリケーションをRenderにデプロイする手順です。
 
-## 推奨サービス
+## 前提条件
 
-### 1. Render（推奨・無料プランあり）
+- GitHubアカウント
+- Renderアカウント（無料プランで利用可能）
+- リポジトリがGitHubにプッシュ済みであること
 
-**メリット:**
-- 無料プランあり
-- GitHubと連携して自動デプロイ
-- 簡単にセットアップ可能
+## デプロイ手順
 
-**手順:**
+### 1. Renderにアクセス
 
-1. [Render](https://render.com) にアカウント作成・ログイン
-2. 「New +」→「Web Service」を選択
-3. GitHubリポジトリを接続: `s-okada-creator/national-exam-tool`
-4. 設定:
-   - **Name**: `national-exam-tool`（任意）
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python app.py`
-5. 「Create Web Service」をクリック
+1. ブラウザで https://dashboard.render.com にアクセス
+2. 「Get Started for Free」をクリックしてアカウント作成
+   - GitHubアカウントでログインすることを推奨
 
-**注意**: 無料プランは15分間の非アクセスでスリープします（初回アクセス時に起動）
+### 2. 新しいWebサービスを作成
 
----
+1. ダッシュボードで「New +」ボタンをクリック
+2. 「Web Service」を選択
 
-### 2. Railway（無料プランあり）
+### 3. GitHubリポジトリを接続
 
-**メリット:**
-- 無料プランあり（月$5分のクレジット）
-- GitHubと連携
-- 簡単なセットアップ
+1. 「Connect account」でGitHubアカウントを接続（初回のみ）
+2. リポジトリ一覧から `s-okada-creator/national-exam-tool` を選択
 
-**手順:**
+### 4. 設定を入力
 
-1. [Railway](https://railway.app) にアカウント作成・ログイン
-2. 「New Project」→「Deploy from GitHub repo」を選択
-3. リポジトリ `s-okada-creator/national-exam-tool` を選択
-4. Railwayが自動的にFlaskアプリを検出してデプロイ
+以下の設定を入力します：
 
----
+- **Name**: `national-exam-tool`
+- **Region**: お好みのリージョン（例: Singapore, Tokyo）
+- **Branch**: `main`
+- **Root Directory**: （空白のまま）
+- **Runtime**: `Python 3`
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `python app.py`
 
-### 3. PythonAnywhere（無料プランあり）
+### 5. 環境変数
 
-**メリット:**
-- 無料プランあり
-- Pythonアプリに特化
-- 簡単なセットアップ
+環境変数は特に設定する必要はありません。Renderが自動的に `PORT` 環境変数を設定します。
 
-**手順:**
+### 6. デプロイ開始
 
-1. [PythonAnywhere](https://www.pythonanywhere.com) にアカウント作成
-2. 「Files」タブでGitHubからリポジトリをクローン
-3. 「Web」タブで新しいWebアプリを作成
-4. WSGI設定ファイルを編集してFlaskアプリを設定
+「Create Web Service」をクリックしてデプロイを開始します。
 
----
+デプロイには数分かかります。ログを確認して、エラーがないか確認してください。
 
-### 4. Fly.io（無料プランあり）
+### 7. デプロイ完了後
 
-**メリット:**
-- 無料プランあり
-- グローバルにデプロイ可能
+デプロイが完了すると、Renderが提供するURL（例: `https://national-exam-tool.onrender.com`）でアプリケーションにアクセスできます。
 
-**手順:**
+## 注意事項
 
-1. [Fly.io](https://fly.io) にアカウント作成
-2. `flyctl` CLIをインストール
-3. `fly launch` コマンドでデプロイ
+- **無料プラン**: Renderの無料プランでは、15分間アクセスがないとスリープします。最初のアクセス時に起動に時間がかかることがあります。
+- **データファイル**: `data/questions.json` はリポジトリに含まれているため、デプロイ時に自動的に含まれます。
+- **セッションデータ**: セッションデータはメモリ上に保存されるため、アプリが再起動されると消去されます。
 
----
+## トラブルシューティング
 
-## デプロイ前の確認事項
+### デプロイが失敗する場合
 
-1. ✅ `Procfile` が作成済み
-2. ✅ `runtime.txt` が作成済み
-3. ✅ `requirements.txt` が最新
-4. ✅ `data/questions.json` がコミット済み
-5. ✅ `.gitignore` で不要なファイルが除外済み
+1. **ログを確認**: Renderのダッシュボードで「Logs」タブを確認
+2. **依存パッケージ**: `requirements.txt` に必要なパッケージがすべて含まれているか確認
+3. **ポート設定**: `app.py` で `PORT` 環境変数を使用しているか確認
 
-## デプロイ後の確認
+### アプリが起動しない場合
 
-- アプリケーションが正常に起動しているか
-- 問題データが正しく読み込まれているか
-- すべての機能が動作しているか
+1. **ログを確認**: エラーメッセージを確認
+2. **データファイル**: `data/questions.json` が存在するか確認
+3. **Pythonバージョン**: `runtime.txt` で指定されたPythonバージョンが正しいか確認
 
-## カスタムドメインの設定（オプション）
+## 自動デプロイ
 
-各サービスでカスタムドメインを設定できます。詳細は各サービスのドキュメントを参照してください。
-
+`render.yaml` ファイルがリポジトリに含まれているため、Renderが自動的に設定を読み込む場合があります。手動で設定を入力する必要がない場合もあります。

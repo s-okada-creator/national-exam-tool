@@ -66,8 +66,21 @@ python3 app.py
 
 このアプリケーションをWeb上で公開する方法は `DEPLOYMENT.md` を参照してください。
 
+### クイックデプロイ（Render）
+
+1. https://dashboard.render.com にアクセス
+2. GitHubアカウントでログイン
+3. 「New +」→「Web Service」を選択
+4. リポジトリ `s-okada-creator/national-exam-tool` を選択
+5. 設定:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python app.py`
+6. 「Create Web Service」をクリック
+
+詳細は `DEPLOYMENT.md` を参照してください。
+
 推奨サービス:
-- **Render**（無料プランあり、簡単）
+- **Render**（無料プランあり、簡単）⭐ 推奨
 - **Railway**（無料プランあり）
 - **PythonAnywhere**（無料プランあり）
 
