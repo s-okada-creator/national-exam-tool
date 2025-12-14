@@ -18,6 +18,13 @@ except Exception as e:
     print(traceback.format_exc())
     raise
 
-# VercelのPythonランタイムはWSGIアプリケーションを直接サポート
-# appを直接エクスポートすることで、Vercelが自動的に検出する
+# Vercelのサーバーレス関数用のハンドラー
+def handler(request):
+    """Vercelのサーバーレス関数ハンドラー"""
+    # VercelのrequestオブジェクトからWSGI環境を構築
+    environ = request.environ
+    start_response = request.start_response
+    
+    # Flaskアプリを呼び出し
+    return app(environ, start_response)
 
