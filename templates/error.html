@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エラー - 国家試験対策ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>⚠️ エラー</h1>
+        </div>
+    </header>
+    <div class="container">
+        <div class="error-message">
+            <h2>エラーが発生しました</h2>
+            <p>{{ error }}</p>
+            <p>管理者にお問い合わせください。</p>
+        </div>
+    </div>
+</body>
+</html>
+

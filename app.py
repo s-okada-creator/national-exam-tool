@@ -14,13 +14,22 @@ app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  # 本番環境では環境変数から取得
 
 # データディレクトリ
-DATA_DIR = Path('data')
+# Vercelのサーバーレス環境では、プロジェクトルートからの相対パスを使用
+DATA_DIR = Path(__file__).parent / 'data'
 QUESTIONS_FILE = DATA_DIR / 'questions.json'
 SESSIONS_DIR = DATA_DIR / 'sessions'
 
-# 問題マネージャーの初期化
-question_manager = QuestionManager(QUESTIONS_FILE)
-report_generator = ReportGenerator()
+# 問題マネージャーの初期化（エラーハンドリング付き）
+try:
+    question_manager = QuestionManager(QUESTIONS_FILE)
+    report_generator = ReportGenerator()
+except Exception as e:
+    print(f"Error initializing question manager: {e}")
+    print(f"QUESTIONS_FILE path: {QUESTIONS_FILE}")
+    print(f"QUESTIONS_FILE exists: {QUESTIONS_FILE.exists()}")
+    # エラーが発生してもアプリは起動できるようにする（後でエラーページを表示）
+    question_manager = None
+    report_generator = None
 
 # セッションデータ（メモリ上、本番環境ではDBを使用）
 sessions = {}
@@ -55,6 +64,8 @@ def report(session_id):
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
     """全ジャンル一覧と問題数を取得"""
+    if question_manager is None:
+        return jsonify({'error': 'Question data not loaded'}), 500
     categories = question_manager.get_categories()
     return jsonify({
         'categories': categories,
@@ -65,6 +76,8 @@ def get_categories():
 @app.route('/api/exam-numbers', methods=['GET'])
 def get_exam_numbers():
     """全試験回数のリストを取得"""
+    if question_manager is None:
+        return jsonify({'error': 'Question data not loaded'}), 500
     exam_numbers = question_manager.get_exam_numbers()
     return jsonify({'exam_numbers': exam_numbers})
 
@@ -72,6 +85,8 @@ def get_exam_numbers():
 @app.route('/api/questions', methods=['GET'])
 def get_questions():
     """問題一覧を取得（フィルタリング対応）"""
+    if question_manager is None:
+        return jsonify({'error': 'Question data not loaded'}), 500
     exam_numbers = request.args.getlist('exam_numbers', type=int)
     categories = request.args.getlist('categories')
     
@@ -93,6 +108,8 @@ def get_questions():
 @app.route('/api/questions/<question_id>', methods=['GET'])
 def get_question(question_id):
     """特定の問題を取得"""
+    if question_manager is None:
+        return jsonify({'error': 'Question data not loaded'}), 500
     question = question_manager.get_question_by_id(question_id)
     if question:
         return jsonify(question)
@@ -103,6 +120,8 @@ def get_question(question_id):
 @app.route('/api/sessions', methods=['POST'])
 def create_session():
     """新しいセッションを作成"""
+    if question_manager is None:
+        return jsonify({'error': 'Question data not loaded'}), 500
     data = request.json
     session_id = str(uuid.uuid4())
     
@@ -188,6 +207,8 @@ def submit_answer(session_id):
 @app.route('/api/sessions/<session_id>/report', methods=['GET'])
 def get_report(session_id):
     """レポートを生成"""
+    if report_generator is None:
+        return jsonify({'error': 'Report generator not initialized'}), 500
     session_data = sessions.get(session_id)
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
@@ -198,14 +219,18 @@ def get_report(session_id):
     # JSONレポートも生成
     json_report = report_generator.generate_json_report(session_data)
     
-    # セッションデータをファイルに保存
-    sessions_dir = SESSIONS_DIR
-    sessions_dir.mkdir(parents=True, exist_ok=True)
-    report_file = sessions_dir / f"{session_id}.json"
-    
-    session_data['report'] = json_report
-    with open(report_file, 'w', encoding='utf-8') as f:
-        json.dump(session_data, f, ensure_ascii=False, indent=2)
+    # セッションデータをファイルに保存（Vercelのサーバーレス環境では/tmpを使用）
+    try:
+        sessions_dir = SESSIONS_DIR
+        sessions_dir.mkdir(parents=True, exist_ok=True)
+        report_file = sessions_dir / f"{session_id}.json"
+        
+        session_data['report'] = json_report
+        with open(report_file, 'w', encoding='utf-8') as f:
+            json.dump(session_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        # ファイル保存に失敗してもレポートは返す
+        print(f"Warning: Could not save session file: {e}")
     
     return jsonify({
         'markdown': markdown_report,
@@ -218,6 +243,8 @@ def get_report_pdf(session_id):
     """PDF形式のレポートを生成してダウンロード"""
     from flask import Response
     
+    if report_generator is None:
+        return jsonify({'error': 'Report generator not initialized'}), 500
     session_data = sessions.get(session_id)
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
