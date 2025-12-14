@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>レポート - 国家試験対策ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📊 フィードバックレポート</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>レポートを生成中...</p>
+        </div>
+
+        <div id="report-content" style="display: none;">
+            <!-- レポートがここに表示されます -->
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="window.location.href='/'">トップに戻る</button>
+            <button class="btn btn-success" id="download-pdf-btn" style="margin-left: 10px;">
+                📄 PDFをダウンロード
+            </button>
+            <button class="btn btn-secondary" id="download-markdown-btn" style="margin-left: 10px;">
+                Markdownをダウンロード
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pathParts = window.location.pathname.split('/');
+            const sessionId = pathParts[pathParts.length - 1] || urlParams.get('session');
+            
+            if (!sessionId) {
+                alert('セッションIDが見つかりません');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}/report`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('エラー: ' + data.error);
+                    window.location.href = '/';
+                    return;
+                }
+                
+                // MarkdownをHTMLに変換して表示
+                const markdownContent = data.markdown || '';
+                const htmlContent = convertMarkdownToHtml(markdownContent);
+                
+                document.getElementById('loading').style.display = 'none';
+                const reportContent = document.getElementById('report-content');
+                reportContent.innerHTML = htmlContent;
+                reportContent.style.display = 'block';
+                
+                // PDFダウンロードボタン
+                document.getElementById('download-pdf-btn').addEventListener('click', function() {
+                    window.location.href = `/api/sessions/${sessionId}/report/pdf`;
+                });
+                
+                // Markdownダウンロードボタン
+                document.getElementById('download-markdown-btn').addEventListener('click', function() {
+                    const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `report_${sessionId}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+                
+            } catch (error) {
+                console.error('Error loading report:', error);
+                alert('レポートの読み込みに失敗しました');
+                window.location.href = '/';
+            }
+        });
+        
+        function convertMarkdownToHtml(markdown) {
+            let html = markdown;
+            
+            // 見出し
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            
+            // 太字
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // リスト
+            html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+            
+            // 改行
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+            
+            // 段落タグでラップ
+            html = html.split('</h1>').join('</h1><p>');
+            html = html.split('</h2>').join('</h2><p>');
+            html = html.split('</h3>').join('</h3><p>');
+            html = html.split('</ul>').join('</ul><p>');
+            html = '<p>' + html + '</p>';
+            
+            // 余分な段落タグを削除
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[123]>)/g, '$1');
+            html = html.replace(/(<\/h[123]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+            
+            // 区切り線
+            html = html.replace(/^---$/gim, '<hr>');
+            
+            return html;
+        }
+    </script>
+</body>
+</html>
+

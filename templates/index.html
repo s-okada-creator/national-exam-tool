@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>国家試験対策ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>国家試験対策ツール</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom: 20px; color: #667eea;">テスト設定</h2>
+            
+            <!-- モード選択 -->
+            <div class="form-group">
+                <label>モードを選択してください</label>
+                <div class="mode-selector">
+                    <div class="mode-card" data-mode="practice" id="mode-practice">
+                        <h2>📖 学習モード</h2>
+                        <p>正解・解説・ヒントを表示しながら学習</p>
+                    </div>
+                    <div class="mode-card" data-mode="test" id="mode-test">
+                        <h2>📝 テストモード</h2>
+                        <p>本番形式でテスト実施</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 試験回数選択 -->
+            <div class="form-group">
+                <label>試験回数を選択してください</label>
+                <div class="checkbox-group" id="exam-numbers-container">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="exam-all" checked>
+                        <label for="exam-all">全回</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学科選択 -->
+            <div class="form-group">
+                <label>学科（ジャンル）を選択してください</label>
+                <div class="checkbox-group" id="categories-container">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="category-all" checked>
+                        <label for="category-all">全学科</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 問題数選択 -->
+            <div class="form-group">
+                <label>問題数（クイック復習用）</label>
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                        <button type="button" class="btn-quick-count" data-count="10">10問</button>
+                        <button type="button" class="btn-quick-count" data-count="15">15問</button>
+                        <button type="button" class="btn-quick-count" data-count="20">20問</button>
+                        <button type="button" class="btn-quick-count" data-count="30">30問</button>
+                        <button type="button" class="btn-quick-count" data-count="50">50問</button>
+                        <button type="button" class="btn-quick-count active" data-count="">全問</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="number" id="max-questions-input" min="1" placeholder="カスタム問題数" 
+                               style="flex: 1; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+                        <span style="color: #666; font-size: 0.9rem;">
+                            選択中の問題数: <span id="available-questions-count">-</span>問
+                        </span>
+                    </div>
+                    <div id="question-count-warning" style="margin-top: 10px; display: none;" class="warning"></div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-success" id="start-btn" style="font-size: 1.2rem; padding: 15px 40px;">
+                    テスト開始
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // ページ読み込み時にデータを取得
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 試験回数を取得
+                const examResponse = await fetch('/api/exam-numbers');
+                const examData = await examResponse.json();
+                const examContainer = document.getElementById('exam-numbers-container');
+                
+                examData.exam_numbers.forEach(examNum => {
+                    const item = document.createElement('div');
+                    item.className = 'checkbox-item';
+                    item.innerHTML = `
+                        <input type="checkbox" id="exam-${examNum}" value="${examNum}">
+                        <label for="exam-${examNum}">第${examNum}回</label>
+                    `;
+                    examContainer.appendChild(item);
+                });
+
+                // ジャンルを取得
+                const catResponse = await fetch('/api/categories');
+                const catData = await catResponse.json();
+                const catContainer = document.getElementById('categories-container');
+                
+                Object.entries(catData.categories).forEach(([category, count]) => {
+                    const item = document.createElement('div');
+                    item.className = 'checkbox-item';
+                    item.innerHTML = `
+                        <input type="checkbox" id="cat-${category}" value="${category}">
+                        <label for="cat-${category}">${category} (${count}問)</label>
+                    `;
+                    catContainer.appendChild(item);
+                });
+
+                // モード選択
+                let selectedMode = 'practice';
+                document.querySelectorAll('.mode-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+                        this.classList.add('active');
+                        selectedMode = this.dataset.mode;
+                    });
+                });
+                document.getElementById('mode-practice').classList.add('active');
+
+                // 全選択の処理
+                document.getElementById('exam-all').addEventListener('change', function() {
+                    const checkboxes = examContainer.querySelectorAll('input[type="checkbox"]:not(#exam-all)');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
+
+                document.getElementById('category-all').addEventListener('change', function() {
+                    const checkboxes = catContainer.querySelectorAll('input[type="checkbox"]:not(#category-all)');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
+
+                // 個別チェックボックスの変更時に全選択の状態を更新
+                examContainer.addEventListener('change', function(e) {
+                    if (e.target.id !== 'exam-all') {
+                        const allChecked = Array.from(examContainer.querySelectorAll('input[type="checkbox"]:not(#exam-all)'))
+                            .every(cb => cb.checked);
+                        document.getElementById('exam-all').checked = allChecked;
+                    }
+                });
+
+                catContainer.addEventListener('change', function(e) {
+                    if (e.target.id !== 'category-all') {
+                        const allChecked = Array.from(catContainer.querySelectorAll('input[type="checkbox"]:not(#category-all)'))
+                            .every(cb => cb.checked);
+                        document.getElementById('category-all').checked = allChecked;
+                    }
+                });
+
+                // 問題数選択の更新関数
+                function updateAvailableQuestionsCount() {
+                    const examNumbers = Array.from(examContainer.querySelectorAll('input[type="checkbox"]:checked:not(#exam-all)'))
+                        .map(cb => parseInt(cb.value));
+                    const categories = Array.from(catContainer.querySelectorAll('input[type="checkbox"]:checked:not(#category-all)'))
+                        .map(cb => cb.value);
+
+                    // APIを呼び出して選択された問題数を取得
+                    const params = new URLSearchParams();
+                    if (examNumbers.length > 0) {
+                        examNumbers.forEach(num => params.append('exam_numbers', num));
+                    }
+                    if (categories.length > 0) {
+                        categories.forEach(cat => params.append('categories', cat));
+                    }
+
+                    fetch(`/api/questions?${params.toString()}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const count = data.total || 0;
+                            document.getElementById('available-questions-count').textContent = count;
+                            checkQuestionCountWarning();
+                        })
+                        .catch(error => {
+                            console.error('Error fetching question count:', error);
+                        });
+                }
+
+                // 問題数警告のチェック
+                function checkQuestionCountWarning() {
+                    const warningDiv = document.getElementById('question-count-warning');
+                    const input = document.getElementById('max-questions-input');
+                    const maxQuestions = parseInt(input.value) || null;
+                    const available = parseInt(document.getElementById('available-questions-count').textContent) || 0;
+
+                    if (maxQuestions && maxQuestions > available) {
+                        warningDiv.textContent = `警告: 選択された問題数（${available}問）より多い問題数を指定しています。全問（${available}問）が使用されます。`;
+                        warningDiv.style.display = 'block';
+                    } else {
+                        warningDiv.style.display = 'none';
+                    }
+                }
+
+                // クイック選択ボタン
+                document.querySelectorAll('.btn-quick-count').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.btn-quick-count').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        const count = this.dataset.count;
+                        const input = document.getElementById('max-questions-input');
+                        if (count === '') {
+                            input.value = '';
+                        } else {
+                            input.value = count;
+                        }
+                        checkQuestionCountWarning();
+                    });
+                });
+
+                // 問題数入力の変更
+                document.getElementById('max-questions-input').addEventListener('input', function() {
+                    // クイック選択ボタンのactiveを解除
+                    document.querySelectorAll('.btn-quick-count').forEach(b => b.classList.remove('active'));
+                    checkQuestionCountWarning();
+                });
+
+                // 試験回数・ジャンルの変更時に問題数を更新
+                examContainer.addEventListener('change', function() {
+                    updateAvailableQuestionsCount();
+                });
+
+                catContainer.addEventListener('change', function() {
+                    updateAvailableQuestionsCount();
+                });
+
+                // 初回の問題数を取得
+                updateAvailableQuestionsCount();
+
+                // テスト開始ボタン
+                document.getElementById('start-btn').addEventListener('click', async function() {
+                    const examNumbers = Array.from(examContainer.querySelectorAll('input[type="checkbox"]:checked:not(#exam-all)'))
+                        .map(cb => parseInt(cb.value));
+                    const categories = Array.from(catContainer.querySelectorAll('input[type="checkbox"]:checked:not(#category-all)'))
+                        .map(cb => cb.value);
+                    
+                    const maxQuestionsInput = document.getElementById('max-questions-input');
+                    const maxQuestions = maxQuestionsInput.value ? parseInt(maxQuestionsInput.value) : null;
+
+                    try {
+                        const response = await fetch('/api/sessions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                mode: selectedMode,
+                                exam_numbers: examNumbers.length > 0 ? examNumbers : null,
+                                categories: categories.length > 0 ? categories : null,
+                                max_questions: maxQuestions
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (data.session_id) {
+                            if (selectedMode === 'practice') {
+                                window.location.href = `/practice?session=${data.session_id}`;
+                            } else {
+                                window.location.href = `/test?session=${data.session_id}`;
+                            }
+                        }
+                    } catch (error) {
+                        alert('エラーが発生しました: ' + error.message);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('データの読み込みに失敗しました');
+            }
+        });
+    </script>
+</body>
+</html>
+
