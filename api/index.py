@@ -18,9 +18,6 @@ except Exception as e:
     print(traceback.format_exc())
     raise
 
-# Vercelのサーバーレス関数用のハンドラー
-# Vercelは自動的にhandler関数を検出する
-def handler(request):
-    """Vercelのサーバーレス関数ハンドラー"""
-    return app(request.environ, request.start_response)
+# VercelのPythonランタイムはWSGIアプリケーションを直接サポート
+# appを直接エクスポートすることで、Vercelが自動的に検出する
 
