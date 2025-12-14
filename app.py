@@ -5,6 +5,7 @@ from flask import Flask, render_template, jsonify, request
 from pathlib import Path
 import json
 import uuid
+import os
 from datetime import datetime
 from utils.question_manager import QuestionManager
 from utils.report_generator import ReportGenerator
@@ -241,5 +242,7 @@ if __name__ == '__main__':
         print("先に utils/excel_loader.py を実行してデータを生成してください。")
     else:
         print(f"問題データを読み込みました: {len(question_manager.get_all_questions())}問")
-        app.run(debug=True, host='0.0.0.0', port=5002)
+        # 環境変数からポートを取得（本番環境用）
+        port = int(os.environ.get('PORT', 5002))
+        app.run(debug=False, host='0.0.0.0', port=port)
 
