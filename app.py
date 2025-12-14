@@ -13,11 +13,6 @@ from utils.report_generator import ReportGenerator
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  # 本番環境では環境変数から取得
 
-# Vercel用のハンドラー（Vercelが自動的に検出）
-def handler(request):
-    """Vercelのサーバーレス関数ハンドラー"""
-    return app(request.environ, request.start_response)
-
 # データディレクトリ
 # Vercelのサーバーレス環境では、プロジェクトルートからの相対パスを使用
 DATA_DIR = Path(__file__).parent / 'data'
