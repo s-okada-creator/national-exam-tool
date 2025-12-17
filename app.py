@@ -249,17 +249,33 @@ def get_report_pdf(session_id):
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
     
-    # PDFレポートを生成
-    pdf_buffer = report_generator.generate_pdf_report(session_data)
-    
-    # レスポンスを返す
-    return Response(
-        pdf_buffer.getvalue(),
-        mimetype='application/pdf',
-        headers={
-            'Content-Disposition': f'attachment; filename=report_{session_id}.pdf'
-        }
-    )
+    try:
+        # PDFレポートを生成
+        pdf_buffer = report_generator.generate_pdf_report(session_data)
+        
+        # バッファの内容を取得
+        pdf_content = pdf_buffer.getvalue()
+        
+        # PDFが正しく生成されたか確認
+        if not pdf_content or len(pdf_content) < 100:
+            print(f"⚠️ PDF生成警告: PDFサイズが異常に小さいです ({len(pdf_content)} bytes)")
+            return jsonify({'error': 'PDF generation failed: invalid PDF size'}), 500
+        
+        # レスポンスを返す
+        return Response(
+            pdf_content,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=report_{session_id}.pdf',
+                'Content-Length': str(len(pdf_content))
+            }
+        )
+    except Exception as e:
+        import traceback
+        error_msg = f"PDF生成エラー: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(traceback.format_exc())
+        return jsonify({'error': error_msg}), 500
 
 
 if __name__ == '__main__':
