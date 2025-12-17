@@ -496,14 +496,18 @@ class ReportGenerator:
                 question_text_style = ParagraphStyle(
                     'QuestionText',
                     parent=normal_style,
+                    fontName=japanese_font_name,
                     fontSize=11,
                     leading=16,
                     spaceAfter=10,
                     leftIndent=0,
                     rightIndent=0
                 )
-                # 改行を保持して表示
+                # 改行を保持して表示、HTMLエスケープも考慮
                 question_text_formatted = question_text.replace('\n', '<br/>')
+                # 特殊文字をエスケープ
+                question_text_formatted = question_text_formatted.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                question_text_formatted = question_text_formatted.replace('<br/>', '<br/>')  # brタグは残す
                 story.append(Paragraph(f"<b>【問題文】</b><br/>{question_text_formatted}", question_text_style))
                 story.append(Spacer(1, 6))
             
