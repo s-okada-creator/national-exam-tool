@@ -310,22 +310,24 @@ class ReportGenerator:
                                 topMargin=20*mm, bottomMargin=20*mm)
         
         # 日本語フォントの登録
+        font_registered = False
+        japanese_font_name = 'Helvetica'
+        
         try:
             # reportlabの組み込み日本語フォントを試す
-            font_registered = False
-            japanese_font_name = 'Helvetica'
-            
             try:
                 pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
                 japanese_font_name = 'HeiseiKakuGo-W5'
                 font_registered = True
-            except:
+                print(f"✅ 日本語フォント登録成功: {japanese_font_name}")
+            except Exception as e1:
                 try:
                     pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
                     japanese_font_name = 'HeiseiMin-W3'
                     font_registered = True
-                except:
-                    pass
+                    print(f"✅ 日本語フォント登録成功: {japanese_font_name}")
+                except Exception as e2:
+                    print(f"⚠️ 組み込みフォント登録失敗: {e1}, {e2}")
             
             if not font_registered:
                 # TTFファイルを探す（フォールバック）
@@ -333,6 +335,8 @@ class ReportGenerator:
                 font_paths = [
                     Path.home() / 'Library/Fonts/NotoSansCJK-Regular.ttc',
                     '/System/Library/Fonts/Supplemental/NotoSansCJK-Regular.ttc',
+                    '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
+                    '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc',
                 ]
                 
                 for font_path in font_paths:
@@ -341,11 +345,16 @@ class ReportGenerator:
                             pdfmetrics.registerFont(TTFont('JapaneseFont', str(font_path)))
                             japanese_font_name = 'JapaneseFont'
                             font_registered = True
+                            print(f"✅ 日本語フォント登録成功: {japanese_font_name} ({font_path})")
                             break
-                        except:
+                        except Exception as e:
+                            print(f"⚠️ フォント登録失敗 ({font_path}): {e}")
                             continue
+            
+            if not font_registered:
+                print("⚠️ 日本語フォントが見つかりません。Helveticaを使用します（文字化けの可能性があります）")
         except Exception as e:
-            print(f"フォント登録エラー: {e}")
+            print(f"❌ フォント登録エラー: {e}")
             japanese_font_name = 'Helvetica'
         
         # スタイル設定
