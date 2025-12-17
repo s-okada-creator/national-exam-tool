@@ -406,13 +406,14 @@ class ReportGenerator:
         story.append(Paragraph("総合成績", heading_style))
         correct_rate = (correct / total * 100) if total > 0 else 0
         
+        # テーブルデータをParagraphオブジェクトに変換（日本語フォントを適用）
         summary_data = [
-            ['項目', '数値'],
-            ['総問題数', f'{total}問'],
-            ['正答数', f'{correct}問'],
-            ['誤答数', f'{incorrect}問'],
-            ['未回答', f'{unanswered}問'],
-            ['正答率', f'{correct_rate:.1f}%']
+            [Paragraph('項目', normal_style), Paragraph('数値', normal_style)],
+            [Paragraph('総問題数', normal_style), Paragraph(f'{total}問', normal_style)],
+            [Paragraph('正答数', normal_style), Paragraph(f'{correct}問', normal_style)],
+            [Paragraph('誤答数', normal_style), Paragraph(f'{incorrect}問', normal_style)],
+            [Paragraph('未回答', normal_style), Paragraph(f'{unanswered}問', normal_style)],
+            [Paragraph('正答率', normal_style), Paragraph(f'{correct_rate:.1f}%', normal_style)]
         ]
         
         summary_table = Table(summary_data, colWidths=[80*mm, 80*mm])
@@ -420,13 +421,13 @@ class ReportGenerator:
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), japanese_font_name),
-            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), japanese_font_name),
-            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('TOPPADDING', (0, 1), (-1, -1), 8),
         ]))
         story.append(summary_table)
         story.append(Spacer(1, 12))
@@ -444,20 +445,22 @@ class ReportGenerator:
             for cat, stats in sorted_categories:
                 cat_correct_rate = (stats['correct'] / stats['total'] * 100) if stats['total'] > 0 else 0
                 story.append(Paragraph(f"<b>{cat}</b>", normal_style))
+                # テーブルデータをParagraphオブジェクトに変換
                 cat_data = [
-                    ['問題数', f"{stats['total']}問"],
-                    ['正答', f"{stats['correct']}問"],
-                    ['誤答', f"{stats['incorrect']}問"],
-                    ['未回答', f"{stats['unanswered']}問"],
-                    ['正答率', f"{cat_correct_rate:.1f}%"]
+                    [Paragraph('問題数', normal_style), Paragraph(f"{stats['total']}問", normal_style)],
+                    [Paragraph('正答', normal_style), Paragraph(f"{stats['correct']}問", normal_style)],
+                    [Paragraph('誤答', normal_style), Paragraph(f"{stats['incorrect']}問", normal_style)],
+                    [Paragraph('未回答', normal_style), Paragraph(f"{stats['unanswered']}問", normal_style)],
+                    [Paragraph('正答率', normal_style), Paragraph(f"{cat_correct_rate:.1f}%", normal_style)]
                 ]
                 cat_table = Table(cat_data, colWidths=[40*mm, 40*mm])
                 cat_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                    ('FONTNAME', (0, 0), (-1, -1), japanese_font_name),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ]))
                 story.append(cat_table)
                 story.append(Spacer(1, 8))
@@ -515,12 +518,17 @@ class ReportGenerator:
                         choice_style = ParagraphStyle(
                             'Choice',
                             parent=normal_style,
+                            fontName=japanese_font_name,
                             fontSize=10,
                             leading=14,
                             leftIndent=20,
                             spaceAfter=4
                         )
+                        # 改行を保持して表示、HTMLエスケープも考慮
                         choice_text_formatted = choice_text.replace('\n', '<br/>')
+                        # 特殊文字をエスケープ
+                        choice_text_formatted = choice_text_formatted.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                        choice_text_formatted = choice_text_formatted.replace('<br/>', '<br/>')  # brタグは残す
                         story.append(Paragraph(f"{choice_num}. {choice_text_formatted}", choice_style))
                 story.append(Spacer(1, 6))
             
