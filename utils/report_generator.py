@@ -482,7 +482,47 @@ class ReportGenerator:
                 normal_style
             ))
             story.append(Paragraph(f"ジャンル: {question['category']}", normal_style))
-            story.append(Paragraph(f"テーマ: {question.get('theme', '')}", normal_style))
+            if question.get('theme'):
+                story.append(Paragraph(f"テーマ: {question.get('theme', '')}", normal_style))
+            story.append(Spacer(1, 6))
+            
+            # 問題文を表示
+            question_text = question.get('question_text', '')
+            if question_text and question_text.strip():
+                # 問題文のスタイル（少し大きめのフォント）
+                question_text_style = ParagraphStyle(
+                    'QuestionText',
+                    parent=normal_style,
+                    fontSize=11,
+                    leading=16,
+                    spaceAfter=10,
+                    leftIndent=0,
+                    rightIndent=0
+                )
+                # 改行を保持して表示
+                question_text_formatted = question_text.replace('\n', '<br/>')
+                story.append(Paragraph(f"<b>【問題文】</b><br/>{question_text_formatted}", question_text_style))
+                story.append(Spacer(1, 6))
+            
+            # 選択肢を表示
+            choices = question.get('choices', {})
+            if choices and any(choices.values()):
+                story.append(Paragraph("<b>【選択肢】</b>", normal_style))
+                for choice_num in ['1', '2', '3', '4']:
+                    choice_text = choices.get(choice_num, '')
+                    if choice_text and choice_text.strip():
+                        # 選択肢のスタイル
+                        choice_style = ParagraphStyle(
+                            'Choice',
+                            parent=normal_style,
+                            fontSize=10,
+                            leading=14,
+                            leftIndent=20,
+                            spaceAfter=4
+                        )
+                        choice_text_formatted = choice_text.replace('\n', '<br/>')
+                        story.append(Paragraph(f"{choice_num}. {choice_text_formatted}", choice_style))
+                story.append(Spacer(1, 6))
             
             # 正誤判定
             correct_answer = question.get('correct_answer', [])
