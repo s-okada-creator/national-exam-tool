@@ -37,9 +37,13 @@ else:
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  # 本番環境では環境変数から取得
 
 # 静的ファイルのバージョン管理（キャッシュバスティング用）
-# JavaScriptとCSSファイルの最終更新時刻を使用してバージョンを生成
+# Vercel環境では、デプロイ時刻を使用してキャッシュを確実に更新
+# ローカル環境では、ファイルの最終更新時刻を使用
 def get_static_file_version(filename):
-    """静的ファイルのバージョンを取得（最終更新時刻のタイムスタンプ）"""
+    """静的ファイルのバージョンを取得"""
+    if IS_VERCEL:
+        # Vercel環境: 起動時刻を使用（デプロイごとに新しいバージョン）
+        return str(int(datetime.now().timestamp()))
     try:
         static_path = Path(__file__).parent / 'static' / filename
         if static_path.exists():
