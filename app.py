@@ -10,6 +10,13 @@ from datetime import datetime
 from utils.question_manager import QuestionManager
 from utils.report_generator import ReportGenerator
 
+# Vercel KV (Upstash Redis) のインポート
+try:
+    from upstash_redis import Redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+
 # 環境変数VERCELを確認して、Vercel環境かどうかを判定
 IS_VERCEL = os.environ.get('VERCEL') == '1'
 
@@ -99,6 +106,76 @@ except Exception as e:
 # セッションデータ（メモリ上、本番環境ではDBを使用）
 sessions = {}
 
+# Redis クライアントの初期化（Vercel KV用）
+redis = None
+if REDIS_AVAILABLE and os.environ.get('KV_REST_API_URL'):
+    try:
+        redis = Redis(
+            url=os.environ.get('KV_REST_API_URL'),
+            token=os.environ.get('KV_REST_API_TOKEN')
+        )
+        print("Vercel KV (Redis) initialized successfully")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Redis: {e}")
+        redis = None
+else:
+    print("Using in-memory session storage (Redis not available)")
+
+# セッション操作関数
+def save_session(session_id, data):
+    """セッションデータを保存（Redisまたはメモリ）"""
+    if redis:
+        try:
+            # TTL: 24時間（86400秒）
+            redis.setex(f"session:{session_id}", 86400, json.dumps(data, ensure_ascii=False))
+        except Exception as e:
+            print(f"Error saving session to Redis: {e}")
+            # フォールバック: メモリに保存
+            sessions[session_id] = data
+    else:
+        # ローカル開発用フォールバック
+        sessions[session_id] = data
+
+def get_session_data(session_id):
+    """セッションデータを取得（Redisまたはメモリ）"""
+    if redis:
+        try:
+            data = redis.get(f"session:{session_id}")
+            if data:
+                return json.loads(data)
+            return None
+        except Exception as e:
+            print(f"Error getting session from Redis: {e}")
+            # フォールバック: メモリから取得
+            return sessions.get(session_id)
+    else:
+        return sessions.get(session_id)
+
+def update_session(session_id, data):
+    """セッションデータを更新（Redisまたはメモリ）"""
+    if redis:
+        try:
+            # 既存のセッションを取得して更新
+            existing_data = get_session_data(session_id)
+            if existing_data:
+                existing_data.update(data)
+                save_session(session_id, existing_data)
+            else:
+                save_session(session_id, data)
+        except Exception as e:
+            print(f"Error updating session in Redis: {e}")
+            # フォールバック: メモリを更新
+            if session_id in sessions:
+                sessions[session_id].update(data)
+            else:
+                sessions[session_id] = data
+    else:
+        # ローカル開発用フォールバック
+        if session_id in sessions:
+            sessions[session_id].update(data)
+        else:
+            sessions[session_id] = data
+
 # グローバルエラーハンドラー
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -109,7 +186,11 @@ def handle_exception(e):
     print(error_trace)
     
     # エラーページを返す
-    return render_template('error.html', error=str(e)), 500
+    try:
+        return render_template('error.html', error=str(e)), 500
+    except Exception as template_error:
+        # テンプレートレンダリングに失敗した場合はプレーンテキストを返す
+        return f"Error: {str(e)}\n\nTemplate rendering failed: {str(template_error)}", 500
 
 @app.errorhandler(404)
 def handle_404(e):
@@ -209,7 +290,9 @@ def create_session():
     """新しいセッションを作成"""
     if question_manager is None:
         return jsonify({'error': 'Question data not loaded'}), 500
-    data = request.json
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'error': 'Invalid JSON or missing request body'}), 400
     session_id = str(uuid.uuid4())
     
     # フィルタリング条件に基づいて問題を取得
@@ -245,7 +328,8 @@ def create_session():
         'current_question_index': 0
     }
     
-    sessions[session_id] = session_data
+    # Redisまたはメモリに保存
+    save_session(session_id, session_data)
     
     return jsonify({
         'session_id': session_id,
@@ -260,7 +344,7 @@ def create_session():
 @app.route('/api/sessions/<session_id>', methods=['GET'])
 def get_session(session_id):
     """セッション情報を取得"""
-    session_data = sessions.get(session_id)
+    session_data = get_session_data(session_id)
     if session_data:
         return jsonify(session_data)
     else:
@@ -270,11 +354,13 @@ def get_session(session_id):
 @app.route('/api/sessions/<session_id>/answers', methods=['POST'])
 def submit_answer(session_id):
     """解答を送信"""
-    session_data = sessions.get(session_id)
+    session_data = get_session_data(session_id)
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
     
-    data = request.json
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'error': 'Invalid JSON or missing request body'}), 400
     question_id = data.get('question_id')
     answer = data.get('answer')
     time_spent = data.get('time_spent', 0)
@@ -286,7 +372,16 @@ def submit_answer(session_id):
         'submitted_at': datetime.now().isoformat()
     }
     
-    session_data['answers'].append(answer_data)
+    # 既存の解答を更新するか、新しい解答を追加
+    answers = session_data.get('answers', [])
+    existing_index = next((i for i, a in enumerate(answers) if a.get('question_id') == question_id), None)
+    if existing_index is not None:
+        answers[existing_index] = answer_data
+    else:
+        answers.append(answer_data)
+    
+    # セッションデータを更新
+    update_session(session_id, {'answers': answers})
     
     return jsonify({'success': True})
 
@@ -296,7 +391,7 @@ def get_report(session_id):
     """レポートを生成"""
     if report_generator is None:
         return jsonify({'error': 'Report generator not initialized'}), 500
-    session_data = sessions.get(session_id)
+    session_data = get_session_data(session_id)
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
     
@@ -335,7 +430,7 @@ def get_report_pdf(session_id):
     
     if report_generator is None:
         return jsonify({'error': 'Report generator not initialized'}), 500
-    session_data = sessions.get(session_id)
+    session_data = get_session_data(session_id)
     if not session_data:
         return jsonify({'error': 'Session not found'}), 404
     
