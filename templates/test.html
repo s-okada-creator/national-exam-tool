@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>テストモード - 国家試験対策ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📝 テストモード</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>読み込み中...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="question-container">
+                <!-- 問題がここに表示されます -->
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-secondary" id="prev-btn">前へ</button>
+                
+                <div style="flex: 1; margin: 0 20px;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <span id="question-counter">1 / 1</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                
+                <button class="btn" id="next-btn">次へ</button>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-danger" id="finish-btn">テスト終了</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}?v={{ js_version }}"></script>
+    <script>
+        // practice.htmlと同じシンプルな実装（Cursor内で完璧に動作している実装）
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session');
+            
+            if (!sessionId) {
+                alert('セッションIDが見つかりません');
+                window.location.href = '/';
+                return;
+            }
+            
+            const loaded = await initSession(sessionId);
+            if (!loaded) {
+                alert('セッションの読み込みに失敗しました');
+                window.location.href = '/';
+                return;
+            }
+            
+            // 最初の問題を表示
+            const question = getCurrentQuestion();
+            if (question) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                displayQuestion(question);
+                updateNavigation();
+            }
+            
+            // ナビゲーションボタン
+            document.getElementById('prev-btn').addEventListener('click', previousQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
+            
+            // テスト終了ボタン
+            document.getElementById('finish-btn').addEventListener('click', function() {
+                if (confirm('テストを終了しますか？レポートを表示します。')) {
+                    window.location.href = `/report/${sessionId}`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

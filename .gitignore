@@ -1,0 +1,33 @@
+# 一時ファイル
+*.xlsx
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 仮想環境
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# バックアップディレクトリ（個人情報を含む可能性があるため除外）
+backup/
+
+# セッションデータ（自動生成）
+data/sessions/*.json
+
+.vercel
