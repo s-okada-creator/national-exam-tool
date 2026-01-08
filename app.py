@@ -127,9 +127,15 @@ def save_session(session_id, data):
     if redis:
         try:
             # TTL: 24時間（86400秒）
-            redis.setex(f"session:{session_id}", 86400, json.dumps(data, ensure_ascii=False))
+            key = f"session:{session_id}"
+            value = json.dumps(data, ensure_ascii=False)
+            print(f"DEBUG: Saving to Redis - key: {key}, value length: {len(value)}, answers in data: {len(data.get('answers', []))}")
+            result = redis.setex(key, 86400, value)
+            print(f"DEBUG: Redis setex result: {result}")
         except Exception as e:
             print(f"Error saving session to Redis: {e}")
+            import traceback
+            print(traceback.format_exc())
             raise  # 例外を再発生させる
     else:
         # Vercel環境ではメモリ保存は機能しない（サーバーレス関数のため）
@@ -392,10 +398,20 @@ def submit_answer(session_id):
     
     # セッションデータ全体を直接保存
     try:
+        print(f"DEBUG: Saving answer for session {session_id}, answers count: {len(session_data.get('answers', []))}")
         save_session(session_id, session_data)
+        print(f"DEBUG: Successfully saved session {session_id}")
+        # 保存後に確認
+        verify_data = get_session_data(session_id)
+        if verify_data:
+            print(f"DEBUG: Verified - answers count after save: {len(verify_data.get('answers', []))}")
+        else:
+            print(f"DEBUG: WARNING - Could not retrieve session data after save")
         return jsonify({'success': True})
     except Exception as e:
         print(f"Error saving answer: {e}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': 'Failed to save answer'}), 500
 
 
