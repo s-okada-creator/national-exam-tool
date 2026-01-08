@@ -130,8 +130,7 @@ def save_session(session_id, data):
             redis.setex(f"session:{session_id}", 86400, json.dumps(data, ensure_ascii=False))
         except Exception as e:
             print(f"Error saving session to Redis: {e}")
-            # フォールバック: メモリに保存
-            sessions[session_id] = data
+            raise  # 例外を再発生させる
     else:
         # ローカル開発用フォールバック
         sessions[session_id] = data
@@ -361,6 +360,7 @@ def submit_answer(session_id):
     data = request.get_json(silent=True)
     if data is None:
         return jsonify({'error': 'Invalid JSON or missing request body'}), 400
+    
     question_id = data.get('question_id')
     answer = data.get('answer')
     time_spent = data.get('time_spent', 0)
@@ -373,17 +373,27 @@ def submit_answer(session_id):
     }
     
     # 既存の解答を更新するか、新しい解答を追加
-    answers = session_data.get('answers', [])
-    existing_index = next((i for i, a in enumerate(answers) if a.get('question_id') == question_id), None)
+    if 'answers' not in session_data:
+        session_data['answers'] = []
+    
+    existing_index = next(
+        (i for i, a in enumerate(session_data['answers']) 
+         if a.get('question_id') == question_id), 
+        None
+    )
+    
     if existing_index is not None:
-        answers[existing_index] = answer_data
+        session_data['answers'][existing_index] = answer_data
     else:
-        answers.append(answer_data)
+        session_data['answers'].append(answer_data)
     
-    # セッションデータを更新
-    update_session(session_id, {'answers': answers})
-    
-    return jsonify({'success': True})
+    # セッションデータ全体を直接保存
+    try:
+        save_session(session_id, session_data)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error saving answer: {e}")
+        return jsonify({'error': 'Failed to save answer'}), 500
 
 
 @app.route('/api/sessions/<session_id>/report', methods=['GET'])
