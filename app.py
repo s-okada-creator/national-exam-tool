@@ -132,6 +132,9 @@ def save_session(session_id, data):
             print(f"Error saving session to Redis: {e}")
             raise  # 例外を再発生させる
     else:
+        # Vercel環境ではメモリ保存は機能しない（サーバーレス関数のため）
+        if IS_VERCEL:
+            raise RuntimeError("Redis is not configured in Vercel environment. Please set KV_REST_API_URL and KV_REST_API_TOKEN environment variables.")
         # ローカル開発用フォールバック
         sessions[session_id] = data
 
