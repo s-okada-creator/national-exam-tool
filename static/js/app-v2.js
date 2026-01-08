@@ -426,10 +426,15 @@ async function submitAnswer(questionId, answer) {
             answers.push(answerData);
         }
         
-        // 自動的に次の問題に移動（既に解答済みでない場合、かつ最後の問題でない場合、かつ解答がnullでない場合）
-        if (!wasAlreadyAnswered && answer !== null && currentQuestionIndex < currentQuestions.length - 1) {
-            // 即座に次の問題に移動
-            nextQuestion();
+        // 自動的に次の問題に移動または最終問題の場合は自動終了
+        if (!wasAlreadyAnswered && answer !== null) {
+            if (currentQuestionIndex < currentQuestions.length - 1) {
+                // 次の問題に移動
+                nextQuestion();
+            } else {
+                // 最終問題 - 自動的にレポートページに移動
+                window.location.href = `/report/${currentSession}`;
+            }
         }
     } catch (error) {
         console.error('Error submitting answer:', error);

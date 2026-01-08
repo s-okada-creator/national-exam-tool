@@ -2,8 +2,11 @@
 フィードバックレポート生成モジュール
 """
 from typing import Dict, List, Any, BinaryIO
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from io import BytesIO
+
+# 日本標準時（JST: UTC+9）
+JST = timezone(timedelta(hours=9))
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
@@ -86,7 +89,7 @@ class ReportGenerator:
         # ヘッダー
         report_lines.append("# 国家試験対策 フィードバックレポート")
         report_lines.append("")
-        report_lines.append(f"**試験日時**: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}")
+        report_lines.append(f"**試験日時**: {datetime.now(JST).strftime('%Y年%m月%d日 %H:%M')}")
         report_lines.append(f"**モード**: {'テストモード' if mode == 'test' else '学習モード'}")
         report_lines.append("")
         
@@ -430,7 +433,7 @@ class ReportGenerator:
         story.append(Spacer(1, 12))
         
         # 基本情報
-        story.append(Paragraph(f"<b>試験日時</b>: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}", normal_style))
+        story.append(Paragraph(f"<b>試験日時</b>: {datetime.now(JST).strftime('%Y年%m月%d日 %H:%M')}", normal_style))
         story.append(Paragraph(f"<b>モード</b>: {'テストモード' if mode == 'test' else '学習モード'}", normal_style))
         if exam_numbers:
             story.append(Paragraph(f"<b>試験回数</b>: 第{', 第'.join(map(str, exam_numbers))}回", normal_style))

@@ -5,11 +5,140 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>レポート - 国家試験対策ツール</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+    <style>
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .report-table th,
+        .report-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .report-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .report-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .report-table tr:last-child td {
+            border-bottom: none;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .summary-card h2 {
+            margin: 0 0 16px 0;
+            font-size: 1.5rem;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .correct-rate {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .section-title {
+            color: #667eea;
+            margin: 32px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+        .result-correct {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .result-incorrect {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .result-unanswered {
+            color: #6c757d;
+            font-weight: bold;
+        }
+        .category-rate {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .rate-high {
+            background: #d4edda;
+            color: #155724;
+        }
+        .rate-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .rate-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-info {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        .test-info p {
+            margin: 8px 0;
+        }
+        .explanation-cell {
+            font-size: 0.9rem;
+            color: #555;
+            max-width: 300px;
+        }
+        @media (max-width: 768px) {
+            .report-table {
+                font-size: 0.85rem;
+            }
+            .report-table th,
+            .report-table td {
+                padding: 8px;
+            }
+            .summary-stats {
+                flex-direction: column;
+            }
+            .correct-rate {
+                font-size: 2rem;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1>📊 フィードバックレポート</h1>
+            <h1>フィードバックレポート</h1>
         </div>
     </header>
 
@@ -26,7 +155,7 @@
         <div style="text-align: center; margin-top: 30px;">
             <button class="btn" onclick="window.location.href='/'">トップに戻る</button>
             <button class="btn btn-success" id="download-pdf-btn" style="margin-left: 10px;">
-                📄 PDFをダウンロード
+                PDFをダウンロード
             </button>
             <button class="btn btn-secondary" id="download-markdown-btn" style="margin-left: 10px;">
                 Markdownをダウンロード
@@ -35,64 +164,54 @@
     </div>
 
     <script>
+        let reportData = null;
+        let markdownContent = '';
+
         document.addEventListener('DOMContentLoaded', async function() {
             const urlParams = new URLSearchParams(window.location.search);
             const pathParts = window.location.pathname.split('/');
             const sessionId = pathParts[pathParts.length - 1] || urlParams.get('session');
-            
+
             if (!sessionId) {
                 alert('セッションIDが見つかりません');
                 window.location.href = '/';
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/sessions/${sessionId}/report`);
-                
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('HTTP error:', response.status, errorText);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data.error) {
                     console.error('API error:', data.error);
                     alert('エラー: ' + data.error);
                     window.location.href = '/';
                     return;
                 }
-                
-                // MarkdownをHTMLに変換して表示
-                const markdownContent = data.markdown || '';
-                
-                if (!markdownContent || markdownContent.trim() === '') {
-                    console.error('Markdown content is empty:', data);
-                    alert('レポートデータがありません。セッションが期限切れの可能性があります。');
-                    window.location.href = '/';
-                    return;
-                }
-                
-                const htmlContent = convertMarkdownToHtml(markdownContent);
-                
-                if (!htmlContent || htmlContent.trim() === '') {
-                    console.error('HTML content is empty after conversion');
-                    alert('レポートの変換に失敗しました');
-                    window.location.href = '/';
-                    return;
-                }
-                
+
+                reportData = data;
+                markdownContent = data.markdown || '';
+
+                // テーブル形式でレポートを表示
+                const htmlContent = generateTableReport(data);
+
                 document.getElementById('loading').style.display = 'none';
                 const reportContent = document.getElementById('report-content');
                 reportContent.innerHTML = htmlContent;
                 reportContent.style.display = 'block';
-                
+
                 // PDFダウンロードボタン
                 document.getElementById('download-pdf-btn').addEventListener('click', function() {
                     window.location.href = `/api/sessions/${sessionId}/report/pdf`;
                 });
-                
+
                 // Markdownダウンロードボタン
                 document.getElementById('download-markdown-btn').addEventListener('click', function() {
                     if (!markdownContent) {
@@ -107,7 +226,7 @@
                     a.click();
                     URL.revokeObjectURL(url);
                 });
-                
+
             } catch (error) {
                 console.error('Error loading report:', error);
                 console.error('Error details:', error.message, error.stack);
@@ -117,75 +236,176 @@
                 document.getElementById('report-content').style.display = 'block';
             }
         });
-        
-        function convertMarkdownToHtml(markdown) {
-            if (!markdown || typeof markdown !== 'string') {
-                return '<p>レポートデータがありません</p>';
+
+        function generateTableReport(data) {
+            const json = data.json || {};
+            const total = json.total || 0;
+            const correct = json.correct || 0;
+            const incorrect = json.incorrect || 0;
+            const unanswered = json.unanswered || 0;
+            const correctRate = json.correct_rate || 0;
+            const categoryStats = json.category_stats || {};
+            const answers = json.answers || [];
+            const questions = json.questions || [];
+
+            // 問題データを辞書に変換
+            const questionDict = {};
+            questions.forEach(q => {
+                questionDict[q.id] = q;
+            });
+
+            let html = '';
+
+            // テスト情報
+            html += `<div class="test-info">
+                <p><strong>試験日時</strong>: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</p>
+                <p><strong>モード</strong>: ${data.mode === 'test' ? 'テストモード' : '学習モード'}</p>
+            </div>`;
+
+            // 総合成績サマリーカード
+            html += `<div class="summary-card">
+                <h2>総合成績</h2>
+                <div class="correct-rate">${correctRate.toFixed(1)}%</div>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${total}</div>
+                        <div class="stat-label">総問題数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${correct}</div>
+                        <div class="stat-label">正答</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${incorrect}</div>
+                        <div class="stat-label">誤答</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${unanswered}</div>
+                        <div class="stat-label">未回答</div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ジャンル別成績テーブル
+            if (Object.keys(categoryStats).length > 0) {
+                html += `<h2 class="section-title">ジャンル別成績</h2>`;
+                html += `<table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>ジャンル</th>
+                            <th>問題数</th>
+                            <th>正答</th>
+                            <th>誤答</th>
+                            <th>未回答</th>
+                            <th>正答率</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                // 正答率でソート
+                const sortedCategories = Object.entries(categoryStats).sort((a, b) => {
+                    const rateA = a[1].total > 0 ? (a[1].correct / a[1].total * 100) : 0;
+                    const rateB = b[1].total > 0 ? (b[1].correct / b[1].total * 100) : 0;
+                    return rateB - rateA;
+                });
+
+                sortedCategories.forEach(([cat, stats]) => {
+                    const catRate = stats.total > 0 ? (stats.correct / stats.total * 100) : 0;
+                    const rateClass = catRate >= 80 ? 'rate-high' : (catRate >= 50 ? 'rate-medium' : 'rate-low');
+                    html += `<tr>
+                        <td>${cat}</td>
+                        <td>${stats.total}</td>
+                        <td>${stats.correct}</td>
+                        <td>${stats.incorrect}</td>
+                        <td>${stats.unanswered}</td>
+                        <td><span class="category-rate ${rateClass}">${catRate.toFixed(1)}%</span></td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
             }
-            
-            let html = markdown;
-            
-            // 区切り線を先に処理
-            html = html.replace(/^---$/gim, '<hr>');
-            
-            // 見出しを処理（順序が重要：### → ## → #）
-            html = html.replace(/^### (.*)$/gim, '<h3>$1</h3>');
-            html = html.replace(/^## (.*)$/gim, '<h2>$1</h2>');
-            html = html.replace(/^# (.*)$/gim, '<h1>$1</h1>');
-            
-            // 太字
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // リスト項目を処理（行単位で）
-            const lines = html.split('\n');
-            let inList = false;
-            let result = [];
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.trim().match(/^- (.+)$/)) {
-                    if (!inList) {
-                        result.push('<ul>');
-                        inList = true;
-                    }
-                    result.push('<li>' + line.replace(/^- (.+)$/, '$1') + '</li>');
+
+            // 問題別詳細テーブル
+            html += `<h2 class="section-title">問題別詳細</h2>`;
+            html += `<table class="report-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>問題</th>
+                        <th>ジャンル</th>
+                        <th>結果</th>
+                        <th>あなたの回答</th>
+                        <th>正解</th>
+                        <th>解答時間</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            answers.forEach((answerData, index) => {
+                const question = questionDict[answerData.question_id];
+                if (!question) return;
+
+                const userAnswer = answerData.answer;
+                const timeSpent = answerData.time_spent || 0;
+                const correctAnswer = question.correct_answer || [];
+                const choices = question.choices || {};
+
+                // 正誤判定
+                let resultClass, resultText;
+                if (userAnswer === null || userAnswer === undefined) {
+                    resultClass = 'result-unanswered';
+                    resultText = '未回答';
+                } else if (Array.isArray(userAnswer)) {
+                    const isCorrect = arraysEqual(userAnswer.sort(), correctAnswer.slice().sort());
+                    resultClass = isCorrect ? 'result-correct' : 'result-incorrect';
+                    resultText = isCorrect ? '正解' : '不正解';
                 } else {
-                    if (inList) {
-                        result.push('</ul>');
-                        inList = false;
-                    }
-                    result.push(line);
+                    const isCorrect = correctAnswer.includes(userAnswer);
+                    resultClass = isCorrect ? 'result-correct' : 'result-incorrect';
+                    resultText = isCorrect ? '正解' : '不正解';
                 }
-            }
-            
-            if (inList) {
-                result.push('</ul>');
-            }
-            
-            html = result.join('\n');
-            
-            // 改行処理
-            html = html.replace(/\n\n+/g, '</p><p>');
-            html = html.replace(/\n/g, '<br>');
-            
-            // 段落タグでラップ（空でない場合のみ）
-            if (html.trim()) {
-                html = '<p>' + html + '</p>';
-            }
-            
-            // 余分な段落タグを削除
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p>(<h[123]>)/g, '$1');
-            html = html.replace(/(<\/h[123]>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<ul>)/g, '$1');
-            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<hr>)/g, '$1');
-            html = html.replace(/(<\/hr>)<\/p>/g, '$1');
-            html = html.replace(/(<hr>)<\/p>/g, '$1');
-            
+
+                // あなたの回答を表示
+                let userAnswerText;
+                if (userAnswer === null || userAnswer === undefined) {
+                    userAnswerText = '-';
+                } else if (Array.isArray(userAnswer)) {
+                    userAnswerText = userAnswer.map(a => `${a}`).join(', ');
+                } else {
+                    userAnswerText = `${userAnswer}`;
+                }
+
+                // 正解を表示
+                let correctAnswerText;
+                if (Array.isArray(correctAnswer)) {
+                    correctAnswerText = correctAnswer.map(a => `${a}`).join(', ');
+                } else {
+                    correctAnswerText = `${correctAnswer}`;
+                }
+
+                html += `<tr>
+                    <td>${index + 1}</td>
+                    <td>第${question.exam_number}回 問${question.question_number}</td>
+                    <td>${question.category}</td>
+                    <td class="${resultClass}">${resultText}</td>
+                    <td>${userAnswerText}</td>
+                    <td>${correctAnswerText}</td>
+                    <td>${timeSpent.toFixed(1)}秒</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>`;
+
             return html;
+        }
+
+        function arraysEqual(a, b) {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
         }
     </script>
 </body>
 </html>
-
