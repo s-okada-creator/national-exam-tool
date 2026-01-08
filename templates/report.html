@@ -56,10 +56,12 @@
         .stat-value {
             font-size: 2rem;
             font-weight: bold;
+            color: #ffffff;
         }
         .stat-label {
             font-size: 0.9rem;
-            opacity: 0.9;
+            color: #ffffff;
+            font-weight: 500;
         }
         .correct-rate {
             font-size: 3rem;
@@ -133,6 +135,76 @@
                 font-size: 1.5rem;
             }
         }
+
+        /* 印刷用スタイル */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                background: white !important;
+            }
+            header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .container {
+                max-width: 100% !important;
+                padding: 0 20px !important;
+            }
+            .summary-card {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                page-break-inside: avoid;
+            }
+            .summary-stats {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-around !important;
+            }
+            .stat-item {
+                flex: 1;
+                min-width: auto !important;
+            }
+            .stat-value, .stat-label, .correct-rate, .summary-card h2 {
+                color: #ffffff !important;
+            }
+            .report-table {
+                page-break-inside: auto;
+            }
+            .report-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            .report-table th {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color: white !important;
+            }
+            .section-title {
+                page-break-after: avoid;
+            }
+            .btn-container {
+                display: none !important;
+            }
+            .rate-high {
+                background: #d4edda !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .rate-medium {
+                background: #fff3cd !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .rate-low {
+                background: #f8d7da !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -152,10 +224,10 @@
             <!-- レポートがここに表示されます -->
         </div>
 
-        <div style="text-align: center; margin-top: 30px;">
+        <div class="btn-container" style="text-align: center; margin-top: 30px;">
             <button class="btn" onclick="window.location.href='/'">トップに戻る</button>
-            <button class="btn btn-success" id="download-pdf-btn" style="margin-left: 10px;">
-                PDFをダウンロード
+            <button class="btn btn-success" id="print-btn" style="margin-left: 10px;">
+                印刷
             </button>
             <button class="btn btn-secondary" id="download-markdown-btn" style="margin-left: 10px;">
                 Markdownをダウンロード
@@ -207,9 +279,9 @@
                 reportContent.innerHTML = htmlContent;
                 reportContent.style.display = 'block';
 
-                // PDFダウンロードボタン
-                document.getElementById('download-pdf-btn').addEventListener('click', function() {
-                    window.location.href = `/api/sessions/${sessionId}/report/pdf`;
+                // 印刷ボタン
+                document.getElementById('print-btn').addEventListener('click', function() {
+                    window.print();
                 });
 
                 // Markdownダウンロードボタン
