@@ -31,3 +31,4 @@ backup/
 data/sessions/*.json
 
 .vercel
+.env*.local

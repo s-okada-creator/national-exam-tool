@@ -58,7 +58,7 @@ def get_static_file_version(filename):
     return str(int(datetime.now().timestamp()))
 
 # アプリケーション起動時に静的ファイルのバージョンを設定
-app.config['JS_VERSION'] = get_static_file_version('js/app.js')
+app.config['JS_VERSION'] = get_static_file_version('js/app-v2.js')
 app.config['CSS_VERSION'] = get_static_file_version('css/style.css')
 
 # テンプレートで使用できるように関数を登録
