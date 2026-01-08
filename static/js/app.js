@@ -479,7 +479,7 @@ function updateNavigation() {
     }
     
     // 問題番号表示
-    const questionNumberEl = document.querySelector('.question-counter');
+    const questionNumberEl = document.getElementById('question-counter');
     if (questionNumberEl) {
         questionNumberEl.textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
     }
